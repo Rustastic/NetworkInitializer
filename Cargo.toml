@@ -10,3 +10,16 @@ toml = "0.8.19"
 rand = "0.8.0"
 colored = "3"
 log = "0.4"
+
+simulation_controller = { git = "https://github.com/Rustastic/SimulationController" }
+
+rusty_drones = { git = "https://github.com/rusty-drone-2024/rusty-drone.git" }
+LeDron_James = { git = "https://github.com/anass03/LeDron_James.git" }
+dr_ones = { git = "https://github.com/Dr-Ones/drone" }
+skylink = { git = "https://github.com/Suge42/Skylink_drone.git" }
+rustbusters-drone = { git = "https://github.com/Rustbusters/drone", features = ["sounds"] }
+rust-roveri = { git = "https://github.com/RustRoveri/rust-roveri.git" }
+rust_do_it = { git = "https://github.com/RustDoIt/Drone.git" }
+wg_2024-rust = { git = "https://github.com/LuigiMiazzo17/unitn-advancedProgramming-WGL_2024-drone.git" }
+null-pointer-drone = { git = "https://github.com/The-Null-Pointer-Patrol/null-pointer-drone.git"}
+lockheedrustin-drone = { git = "https://github.com/Lockheed-Rustin/drone.git" }
