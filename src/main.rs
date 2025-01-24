@@ -1,5 +1,9 @@
 mod network_initializer;
 
 fn main() {
-    println!("Hello World!");
+    println!("Start!");
+
+    network_initializer::run();
+
+    println!("Finish!");
 }

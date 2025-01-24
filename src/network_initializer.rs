@@ -1,5 +1,5 @@
 use crossbeam_channel::{unbounded, Receiver, Sender};
-use std::{collections::HashMap, fs};
+use std::{collections::HashMap, fs, thread};
 
 use wg_2024::{
     config::{Config, Drone as ConfigDrone},
@@ -18,6 +18,45 @@ fn open(path: &str) -> Config {
     toml::from_str(&config_data).expect("Unable to parse TOML")
 }
 
+fn create_factory<D>() -> Box<
+    dyn Fn(
+        &ConfigDrone,
+        &Sender<DroneEvent>,
+        &Receiver<DroneCommand>,
+        &HashMap<NodeId, Sender<Packet>>,
+        &HashMap<NodeId, Receiver<Packet>>,
+    ) -> Box<dyn Drone>,
+>
+where
+    D: Drone + 'static,
+{
+    Box::new(
+        |drone, event_send, command_recv, all_packet_send, all_packet_recv| {
+            let packet_recv = all_packet_recv.get(&drone.id).unwrap().clone();
+
+            let mut packet_send = HashMap::<NodeId, Sender<Packet>>::new();
+
+            for neighbor in &drone.connected_node_ids {
+                all_packet_send
+                    .iter()
+                    .filter(|(node_id, _)| *node_id == neighbor)
+                    .for_each(|(node_id, channel)| {
+                        packet_send.insert(*node_id, channel.clone());
+                    });
+            }
+
+            Box::new(D::new(
+                drone.id,
+                event_send.clone(),
+                command_recv.clone(),
+                packet_recv,
+                packet_send,
+                drone.pdr,
+            ))
+        },
+    )
+}
+
 pub fn run() {
     // Open and read File
     let config = open("src/config.toml");
@@ -31,11 +70,13 @@ pub fn run() {
     let (event_send, event_recv) = unbounded::<DroneEvent>();
 
     // HashMap for packet channels
-    let mut packet_send = HashMap::<NodeId, Sender<Packet>>::new();
+    let mut all_packet_send = HashMap::<NodeId, Sender<Packet>>::new();
+    let mut all_packet_recv = HashMap::<NodeId, Receiver<Packet>>::new();
 
     for drone in &config.drone {
-        let (pkt_send, _) = unbounded::<Packet>();
-        packet_send.insert(drone.id, pkt_send);
+        let (pkt_send, pkt_recv) = unbounded::<Packet>();
+        all_packet_send.insert(drone.id, pkt_send);
+        all_packet_recv.insert(drone.id, pkt_recv);
     }
 
     // Vector of drones and hashmap for the simulation controller
@@ -59,53 +100,46 @@ pub fn run() {
     // Generate drones using factories
     for (n, drone) in config.drone.iter().enumerate() {
         if let Some(factory) = drone_factories.get(n) {
-            let new_drone = factory(drone, &event_send, &command_recv, &packet_send);
+            let new_drone = factory(
+                drone,
+                &event_send,
+                &command_recv,
+                &all_packet_send,
+                &all_packet_recv,
+            );
 
             // Add the new drone to the list and hashmap
             drones.push(new_drone);
-            
-            if let Some(pkt_send) = packet_send.get(&drone.id) {
+
+            if let Some(pkt_send) = all_packet_send.get(&drone.id) {
                 drones_hashmap.insert(drone.id, (command_send.clone(), pkt_send.clone()));
             } else {
                 panic!("Packet sender not found for drone {}", drone.id);
             }
-            
         } else {
             panic!("No factory defined for [ Drone {} ]", drone.id);
         }
     }
 
     // Create and initialize simulation controller
-    let simulation_controller = SimulationController::new(drones_hashmap, event_recv);
+    let mut simulation_controller = SimulationController::new(drones_hashmap, event_recv);
 
+    let controller_handle = thread::spawn(move || {
+        simulation_controller.run();
+    });
+
+    let mut drone_handles = Vec::new();
     // Run drones
-    for drone in &mut drones {
-        drone.run();
+    for mut drone in drones.into_iter() {
+        let handle = thread::spawn(move || {
+            drone.run();
+        });
+        drone_handles.push(handle);
     }
-}
 
-// Helper function for creating factories
-fn create_factory<D>() -> Box<
-    dyn Fn(
-        &ConfigDrone,
-        &Sender<DroneEvent>,
-        &Receiver<DroneCommand>,
-        &HashMap<NodeId, Sender<Packet>>,
-    ) -> Box<dyn Drone>,
->
-where
-    D: Drone + 'static,
-{
-    Box::new(|drone, event_send, command_recv, packet_send| {
-        let (_, packet_recv) = unbounded::<Packet>();
+    controller_handle.join().unwrap();
 
-        Box::new(D::new(
-            drone.id,
-            event_send.clone(),
-            command_recv.clone(),
-            packet_recv,
-            packet_send.clone(),
-            drone.pdr,
-        ))
-    })
+    for handle in drone_handles {
+        handle.join().unwrap();
+    }
 }
