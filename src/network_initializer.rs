@@ -34,7 +34,7 @@ use simulation_controller::SimulationController;
 ///
 /// # Panics
 /// * If the required channels for a drone are not found in the provided hashmaps.
-pub fn drone_factory<T>() -> Box<
+fn drone_factory<T>() -> Box<
     dyn Fn(
         &ConfigDrone,
         &Sender<DroneEvent>,
