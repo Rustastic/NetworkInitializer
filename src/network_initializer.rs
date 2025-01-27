@@ -114,6 +114,9 @@ fn open(path: &str) -> Config {
 /// * If the configuration contains fewer than 10 drones.
 /// * If required channels or factories are missing during drone initialization.
 pub fn run() {
+    // Initialize env_logger
+    env_logger::init();
+
     // Open and read File
     let config = open("src/config.toml");
     if config.drone.len() < 10 {
@@ -163,8 +166,7 @@ pub fn run() {
         drone_factory::<rust_do_it::RustDoIt>(),
         drone_factory::<wg_2024_rust::drone::RustDrone>(),
         drone_factory::<null_pointer_drone::MyDrone>(),
-        drone_factory::<null_pointer_drone::MyDrone>(),
-        //create_factory::<lockheedrustin_drone::LockheedRustin>(),
+        drone_factory::<lockheedrustin_drone::LockheedRustin>(),
     ];
 
     // Generate drones using factories
@@ -207,7 +209,7 @@ pub fn run() {
     }
 
     // Create and initialize the Simulation Controller
-    let mut simulation_controller = SimulationController::new(drones_hashmap, event_recv, neighbor);
+    let mut simulation_controller = SimulationController::new(drones_hashmap, event_recv, neighbor, event_send);
 
     // Run simulation controller on different tread
     let controller_handle = thread::spawn(move || {
