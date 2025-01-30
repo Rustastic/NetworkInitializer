@@ -18,6 +18,7 @@ use wg_2024::{
 };
 
 use simulation_controller::SimulationController;
+use gui::{GUICommands, GUIEvents, SimCtrlGUI};
 
 /// Creates a factory function for generating drones of a specified type.
 ///
@@ -208,8 +209,11 @@ pub fn run() {
         neighbor.insert(drone.id, drone.connected_node_ids.clone());
     }
 
+    let (gui_command_send, gui_command_recv) = unbounded::<GUICommands>();
+    let (gui_event_send, gui_event_recv) = unbounded::<GUIEvents>();
     // Create and initialize the Simulation Controller
-    let mut simulation_controller = SimulationController::new(drones_hashmap, event_recv, neighbor, event_send);
+    let mut simulation_controller = SimulationController::new(drones_hashmap, event_recv, neighbor, event_send, gui_event_send, gui_command_recv);
+    let mut controller = simulation_controller.clone();
 
     // Run simulation controller on different tread
     let controller_handle = thread::spawn(move || {
@@ -224,6 +228,17 @@ pub fn run() {
         });
         drone_handles.push(handle);
     }
+
+    // launch GUI
+    ////////////////////////////////////////////////----------------------------------------------------------------------------------------------
+    // sbagliato il channel da mettere apposto
+    ////////////////////////////////////////////////----------------------------------------------------------------------------------------------
+    let options = eframe::NativeOptions::default();
+    let _ = eframe::run_native(
+        "Drone Simulation GUI",
+        options,
+        Box::new(|_cc| Ok(Box::new(SimCtrlGUI::new(controller, gui_command_send, gui_event_recv)))),
+    );
 
     // Join all threads
     controller_handle.join().unwrap();
