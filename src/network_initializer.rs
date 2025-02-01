@@ -211,9 +211,10 @@ pub fn run() {
 
     let (gui_command_send, gui_command_recv) = unbounded::<GUICommands>();
     let (gui_event_send, gui_event_recv) = unbounded::<GUIEvents>();
+    let gui_send = gui_event_send.clone();
+
     // Create and initialize the Simulation Controller
     let mut simulation_controller = SimulationController::new(drones_hashmap, event_recv, neighbor, event_send, gui_event_send, gui_command_recv);
-    let mut controller = simulation_controller.clone();
 
     // Run simulation controller on different tread
     let controller_handle = thread::spawn(move || {
@@ -233,11 +234,14 @@ pub fn run() {
     ////////////////////////////////////////////////----------------------------------------------------------------------------------------------
     // sbagliato il channel da mettere apposto
     ////////////////////////////////////////////////----------------------------------------------------------------------------------------------
+    let gui = SimCtrlGUI::new(gui_command_send, gui_event_recv);
+    gui_send.send(GUIEvents::Topology(config.drone)).unwrap();
+
     let options = eframe::NativeOptions::default();
     let _ = eframe::run_native(
         "Drone Simulation GUI",
         options,
-        Box::new(|_cc| Ok(Box::new(SimCtrlGUI::new(controller, gui_command_send, gui_event_recv)))),
+        Box::new(|_cc| Ok(Box::new(gui))),
     );
 
     // Join all threads
