@@ -6,7 +6,9 @@
 //!
 //! Author: Alessandro Busola
 
+use colored::Colorize;
 use crossbeam_channel::{unbounded, Receiver, Sender};
+use log::info;
 use std::{collections::HashMap, fs, thread};
 
 use wg_2024::{
@@ -17,8 +19,8 @@ use wg_2024::{
     packet::Packet,
 };
 
-use simulation_controller::SimulationController;
 use gui::{GUICommands, GUIEvents, SimCtrlGUI};
+use simulation_controller::SimulationController;
 
 /// Creates a factory function for generating drones of a specified type.
 ///
@@ -115,9 +117,10 @@ fn open(path: &str) -> Config {
 /// * If the configuration contains fewer than 10 drones.
 /// * If required channels or factories are missing during drone initialization.
 pub fn run() {
-    // Initialize env_logger
-    env_logger::init();
-
+    info!(
+        "[ {} ] Starting Network Initializer",
+        "Network Initializer".green()
+    );
     // Open and read File
     let config = open("src/config.toml");
     if config.drone.len() < 10 {
@@ -170,6 +173,7 @@ pub fn run() {
         drone_factory::<lockheedrustin_drone::LockheedRustin>(),
     ];
 
+    info!("[ {} ] Creating Drones", "Network Initializer".green());
     // Generate drones using factories
     for (n, drone) in config.drone.iter().enumerate() {
         // Get right function
@@ -214,7 +218,18 @@ pub fn run() {
     let gui_send = gui_event_send.clone();
 
     // Create and initialize the Simulation Controller
-    let mut simulation_controller = SimulationController::new(drones_hashmap, event_recv, neighbor, event_send, gui_event_send, gui_command_recv);
+    info!(
+        "[ {} ] Creating Simulation Controller",
+        "Network Initializer".green()
+    );
+    let mut simulation_controller = SimulationController::new(
+        drones_hashmap,
+        event_recv,
+        neighbor,
+        event_send,
+        gui_event_send,
+        gui_command_recv,
+    );
 
     // Run simulation controller on different tread
     let controller_handle = thread::spawn(move || {
@@ -231,9 +246,7 @@ pub fn run() {
     }
 
     // launch GUI
-    ////////////////////////////////////////////////----------------------------------------------------------------------------------------------
-    // sbagliato il channel da mettere apposto
-    ////////////////////////////////////////////////----------------------------------------------------------------------------------------------
+    info!("[ {} ] Creating GUI", "Network Initializer".green());
     let gui = SimCtrlGUI::new(gui_command_send, gui_event_recv);
     gui_send.send(GUIEvents::Topology(config.drone)).unwrap();
 
