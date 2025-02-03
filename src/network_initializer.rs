@@ -213,9 +213,9 @@ pub fn run() {
         neighbor.insert(drone.id, drone.connected_node_ids.clone());
     }
 
-    /*let (gui_command_send, gui_command_recv) = unbounded::<GUICommands>();
+    let (gui_command_send, gui_command_recv) = unbounded::<GUICommands>();
     let (gui_event_send, gui_event_recv) = unbounded::<GUIEvents>();
-    let gui_send = gui_event_send.clone();*/
+    let gui_send = gui_event_send.clone();
 
     // Create and initialize the Simulation Controller
     info!(
@@ -227,8 +227,8 @@ pub fn run() {
         event_recv,
         neighbor,
         event_send,
-        /*gui_event_send,
-        gui_command_recv,*/
+        gui_event_send,
+        gui_command_recv,
     );
 
     // Run simulation controller on different tread
@@ -246,7 +246,7 @@ pub fn run() {
     }
 
     // launch GUI
-    /*info!("[ {} ] Creating GUI", "Network Initializer".green());
+    info!("[ {} ] Creating GUI", "Network Initializer".green());
     let gui = SimCtrlGUI::new(gui_command_send, gui_event_recv);
     gui_send.send(GUIEvents::Topology(config.drone)).unwrap();
 
@@ -255,7 +255,7 @@ pub fn run() {
         "Drone Simulation GUI",
         options,
         Box::new(|_cc| Ok(Box::new(gui))),
-    );*/
+    );
 
     // Join all threads
     controller_handle.join().unwrap();

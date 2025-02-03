@@ -20,7 +20,7 @@ slog-scope = "4.4.0"
 eframe = { version = "0.30.0", features = ["default", "__screenshot"] }
 egui_extras = { version = "0.30.0", features = ["default", "image"] }
 
-simulation_controller = { git = "https://github.com/Rustastic/SimulationController", branch = "main"}
+simulation_controller = { git = "https://github.com/Rustastic/SimulationController", branch = "gui"}
 
 gui = { git = "https://github.com/Rustastic/GUI" }
 
