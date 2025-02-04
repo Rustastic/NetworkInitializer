@@ -217,28 +217,29 @@ pub fn run() {
     }
 
     // Client
-    let half = config.client.len() / 2;
-    let count = 0;
+    let half = config.client.len() / 2; // number of chat clients
+    let mut count = 0;
 
     info!(
-        "[ {} ] Creating Chat Client",
+        "[ {} ] Creating ChatClient and MediaClient",
         "Network Initializer".green()
     );
-    info!(
-        "[ {} ] Crating Media Server",
-        "Network Initializer".green()
-    );
+    // Create vectors to save clients
     let chat_clients = Vec::<ChatClient>::new();
     let media_clients = Vec::<MediaClient>::new();
 
+    // create hashmap to pass to clients
     let cclient_send = HashMap::<NodeId, Sender<ChatClientCommand>>::new();
     let mclient_send = HashMap::<NodeId, Sender<MediaClientCommand>>::new();
 
+    // generate
     for client in &config.client {
         if count <= half {
+            // Create ChatClient channels
             let (cclient_command_send, cclient_command_recv) = unbounded::<ChatClientCommand>();
             let (cclient_event_send, cclient_event_recv) = unbounded::<ChatClientEvent>();
 
+            // Create ChatClient
             let cclient = ChatClient::new(
                 client.id,
                 cclient_event_send.clone(),
@@ -250,12 +251,15 @@ pub fn run() {
             // Init ChatClient
             cclient_command_send.send(ChatClientCommand::StartChatClient);
 
+            // Add to structures
             chat_clients.push(cclient);
             cclient_send.insert(client.id, cclient_command_send);
         } else {
+            // Create MediaClient channels
             let (mclient_command_send, mclient_command_recv) = unbounded::<MediaClientCommand>();
             let (mclient_event_send, mclient_event_recv) = unbounded::<MediaClientEvent>();
 
+            // Create MediaClient
             let mclient = MediaClient::new(
                 client.id,
                 mclient_event_send.clone(),
@@ -264,13 +268,17 @@ pub fn run() {
                 packet_send,
             );
 
+            // Add to structures
             chat_clients.push(mclient);
             mclient_send.insert(client.id, mclient_command_send);
         }
+        // Add client to neighbor vec
         neighbor.insert(client.id, client.connected_drone_ids.clone());
-        half += 1;
+        
+        count += 1;
     } 
 
+    // Create Channels for the GUI
     let (gui_command_send, gui_command_recv) = unbounded::<GUICommands>();
     let (gui_event_send, gui_event_recv) = unbounded::<GUIEvents>();
     let gui_send = gui_event_send.clone();
