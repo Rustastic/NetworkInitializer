@@ -232,7 +232,7 @@ pub fn run() {
     let cclient_send = HashMap::<NodeId, Sender<ChatClientCommand>>::new();
     let mclient_send = HashMap::<NodeId, Sender<MediaClientCommand>>::new();
 
-    // generate
+    // Generate clients
     for client in &config.client {
         if count <= half {
             // Create ChatClient channels
