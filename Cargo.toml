@@ -17,10 +17,13 @@ slog-async = "2.6"
 slog-stdlog = "4.1.1"
 slog-scope = "4.4.0"
 
-eframe = { version = "0.30.0", features = ["default", "__screenshot"] }
-egui_extras = { version = "0.30.0", features = ["default", "image"] }
+eframe = { version = "0.31.0", features = ["default", "__screenshot"] }
+egui_extras = { version = "0.31.0", features = ["default", "image"] }
 
 simulation_controller = { git = "https://github.com/Rustastic/SimulationController", branch = "gui"}
+chat-client = { git = "https://github.com/Rustastic/ChatClient" }
+media_client = { git = "https://github.com/Rustastic/media_client" }
+messages = { git = "https://github.com/Rustastic/Messages" }
 
 gui = { git = "https://github.com/Rustastic/GUI" }
 

@@ -19,8 +19,14 @@ use wg_2024::{
     packet::Packet,
 };
 
-use gui::{GUICommands, GUIEvents, SimCtrlGUI};
 use simulation_controller::SimulationController;
+use gui::{
+    commands::{GUICommands, GUIEvents},
+    SimCtrlGUI,
+};
+use chat_client::ChatClient;
+use media_client::MediaClient;
+use messages::client_commands::{ChatClientCommand, ChatClientEvent, MediaClientCommand, MediaClientEvent};
 
 /// Creates a factory function for generating drones of a specified type.
 ///
@@ -123,9 +129,6 @@ pub fn run() {
     );
     // Open and read File
     let config = open("src/config.toml");
-    if config.drone.len() < 10 {
-        panic!("ERROR: At least 10 drones are required");
-    }
 
     // Event channels
     let (event_send, event_recv) = unbounded::<DroneEvent>();
@@ -213,6 +216,61 @@ pub fn run() {
         neighbor.insert(drone.id, drone.connected_node_ids.clone());
     }
 
+    // Client
+    let half = config.client.len() / 2;
+    let count = 0;
+
+    info!(
+        "[ {} ] Creating Chat Client",
+        "Network Initializer".green()
+    );
+    info!(
+        "[ {} ] Crating Media Server",
+        "Network Initializer".green()
+    );
+    let chat_clients = Vec::<ChatClient>::new();
+    let media_clients = Vec::<MediaClient>::new();
+
+    let cclient_send = HashMap::<NodeId, Sender<ChatClientCommand>>::new();
+    let mclient_send = HashMap::<NodeId, Sender<MediaClientCommand>>::new();
+
+    for client in &config.client {
+        if count <= half {
+            let (cclient_command_send, cclient_command_recv) = unbounded::<ChatClientCommand>();
+            let (cclient_event_send, cclient_event_recv) = unbounded::<ChatClientEvent>();
+
+            let cclient = ChatClient::new(
+                client.id,
+                cclient_event_send.clone(),
+                cclient_command_recv,
+                packet_recv,
+                packet_send,
+            );
+
+            // Init ChatClient
+            cclient_command_send.send(ChatClientCommand::StartChatClient);
+
+            chat_clients.push(cclient);
+            cclient_send.insert(client.id, cclient_command_send);
+        } else {
+            let (mclient_command_send, mclient_command_recv) = unbounded::<MediaClientCommand>();
+            let (mclient_event_send, mclient_event_recv) = unbounded::<MediaClientEvent>();
+
+            let mclient = MediaClient::new(
+                client.id,
+                mclient_event_send.clone(),
+                mclient_command_recv,
+                packet_recv,
+                packet_send,
+            );
+
+            chat_clients.push(mclient);
+            mclient_send.insert(client.id, mclient_command_send);
+        }
+        neighbor.insert(client.id, client.connected_drone_ids.clone());
+        half += 1;
+    } 
+
     let (gui_command_send, gui_command_recv) = unbounded::<GUICommands>();
     let (gui_event_send, gui_event_recv) = unbounded::<GUIEvents>();
     let gui_send = gui_event_send.clone();
@@ -229,6 +287,10 @@ pub fn run() {
         event_send,
         gui_event_send,
         gui_command_recv,
+        cclient_send,
+        cclient_event_recv,
+        mclient_send,
+        mclient_command_recv,
     );
 
     // Run simulation controller on different tread
@@ -243,6 +305,24 @@ pub fn run() {
             drone.run();
         });
         drone_handles.push(handle);
+    }
+
+    let mut cclient_handles = Vec::new();
+    // Run chat clients on different threads
+    for mut client in chat_clients.into_iter() {
+        let handle = thread::spawn(move || {
+            client.run();
+        });
+        cclient_handles.push(handle);
+    }
+
+    let mut mclient_handles = Vec::new();
+    // Run media client on different threads
+    for mut mclient in media_clients.into_iter() {
+        let handle = thread::spawn(move || {
+            mclient.run();
+        });
+        mclient_handles.push(handle);
     }
 
     // launch GUI
@@ -261,6 +341,14 @@ pub fn run() {
     controller_handle.join().unwrap();
 
     for handle in drone_handles {
+        handle.join().unwrap();
+    }
+
+    for handle in cclient_handles {
+        handle.join().unwrap();
+    }
+
+    for handle in mclient_handles {
         handle.join().unwrap();
     }
 }
