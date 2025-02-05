@@ -217,7 +217,7 @@ pub fn run() {
     }
 
     // Client
-    let half = config.client.len() / 2; // number of chat clients
+    let half = config.client.len() / 2; // Number of chat clients
     let mut count = 0;
 
     info!(
@@ -247,9 +247,6 @@ pub fn run() {
                 packet_recv,
                 packet_send,
             );
-
-            // Init ChatClient
-            cclient_command_send.send(ChatClientCommand::StartChatClient);
 
             // Add to structures
             chat_clients.push(cclient);
@@ -333,10 +330,10 @@ pub fn run() {
         mclient_handles.push(handle);
     }
 
-    // launch GUI
+    // Run GUI on main thread
     info!("[ {} ] Creating GUI", "Network Initializer".green());
     let gui = SimCtrlGUI::new(gui_command_send, gui_event_recv);
-    gui_send.send(GUIEvents::Topology(config.drone)).unwrap();
+    gui_send.send(GUIEvents::Topology(config.drone, config.client)).unwrap();
 
     let options = eframe::NativeOptions::default();
     let _ = eframe::run_native(
