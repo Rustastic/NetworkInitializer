@@ -25,7 +25,7 @@ use gui::{
     SimCtrlGUI,
 };
 use chat_client::ChatClient;
-use media_client::MediaClient;
+//use media_client::MediaClient;
 use messages::client_commands::{ChatClientCommand, ChatClientEvent, MediaClientCommand, MediaClientEvent};
 
 /// Creates a factory function for generating drones of a specified type.
@@ -156,6 +156,37 @@ pub fn run() {
         command_recv.insert(id, cmd_recv);
     }
 
+    // Create vectors to save clients
+    let mut chat_clients = Vec::<ChatClient>::new();
+    //let media_clients = Vec::<MediaClient>::new();
+
+    // create hashmap to pass to clients
+    let mut cclient_send = HashMap::<NodeId, (Sender<ChatClientCommand>, Sender<Packet>)>::new();
+    let mut cclient_recv = HashMap::<NodeId, Receiver<ChatClientCommand>>::new();
+    let mut mclient_send = HashMap::<NodeId, Sender<MediaClientCommand>>::new();
+    let mut mclient_recv = HashMap::<NodeId, Receiver<MediaClientCommand>>::new();
+
+    let (cclient_event_send, cclient_event_recv) = unbounded::<ChatClientEvent>();
+    //let (mclient_event_send, mclient_event_recv) = unbounded::<MediaClientEvent>();
+
+    let half = config.client.len() / 2; // Number of chat clients
+    let mut count = 0;
+    for client in &config.client {
+        if count < half {
+            // Create ChatClient channels
+            let (cclient_command_send, cclient_command_recv) = unbounded::<ChatClientCommand>();
+            let (pkt_send, pkt_recv) = unbounded::<Packet>();
+
+            packet_send.insert(client.id, pkt_send.clone());
+            packet_recv.insert(client.id, pkt_recv);
+
+            cclient_recv.insert(client.id, cclient_command_recv);
+            cclient_send.insert(client.id, (cclient_command_send, pkt_send));
+        } else {
+            
+        }
+    }
+
     // Vector of drones
     let mut drones: Vec<Box<dyn Drone>> = Vec::new();
 
@@ -217,63 +248,52 @@ pub fn run() {
     }
 
     // Client
-    let half = config.client.len() / 2; // Number of chat clients
-    let mut count = 0;
-
     info!(
         "[ {} ] Creating ChatClient and MediaClient",
         "Network Initializer".green()
     );
-    // Create vectors to save clients
-    let chat_clients = Vec::<ChatClient>::new();
-    let media_clients = Vec::<MediaClient>::new();
-
-    // create hashmap to pass to clients
-    let cclient_send = HashMap::<NodeId, Sender<ChatClientCommand>>::new();
-    let mclient_send = HashMap::<NodeId, Sender<MediaClientCommand>>::new();
-
+    
     // Generate clients
+    count = 0;
     for client in &config.client {
-        if count <= half {
-            // Create ChatClient channels
-            let (cclient_command_send, cclient_command_recv) = unbounded::<ChatClientCommand>();
-            let (cclient_event_send, cclient_event_recv) = unbounded::<ChatClientEvent>();
-
+        if count < half {
             // Create ChatClient
             let cclient = ChatClient::new(
                 client.id,
                 cclient_event_send.clone(),
-                cclient_command_recv,
-                packet_recv,
-                packet_send,
+                cclient_recv.get(&client.id).unwrap().clone(),
+                packet_recv.get(&client.id).unwrap().clone(),
+                packet_send.clone(),
             );
 
             // Add to structures
             chat_clients.push(cclient);
-            cclient_send.insert(client.id, cclient_command_send);
         } else {
             // Create MediaClient channels
-            let (mclient_command_send, mclient_command_recv) = unbounded::<MediaClientCommand>();
-            let (mclient_event_send, mclient_event_recv) = unbounded::<MediaClientEvent>();
+            /*let (mclient_command_send, mclient_command_recv) = unbounded::<MediaClientCommand>();c
 
             // Create MediaClient
             let mclient = MediaClient::new(
                 client.id,
                 mclient_event_send.clone(),
                 mclient_command_recv,
-                packet_recv,
-                packet_send,
+                packet_recv.get(&client.id).unwrap().clone(),
+                packet_send.clone(),
             );
 
             // Add to structures
             chat_clients.push(mclient);
-            mclient_send.insert(client.id, mclient_command_send);
+            mclient_send.insert(client.id, mclient_command_recv);ù
+            mclient_recv.insert(client.id, mclient_command_send);*/
         }
         // Add client to neighbor vec
         neighbor.insert(client.id, client.connected_drone_ids.clone());
         
         count += 1;
     } 
+
+    //////////////////////////// REMOVE
+    let (_, mclient_event_recv) = unbounded::<MediaClientEvent>();
 
     // Create Channels for the GUI
     let (gui_command_send, gui_command_recv) = unbounded::<GUICommands>();
@@ -295,7 +315,7 @@ pub fn run() {
         cclient_send,
         cclient_event_recv,
         mclient_send,
-        mclient_command_recv,
+        mclient_event_recv,
     );
 
     // Run simulation controller on different tread
@@ -321,14 +341,14 @@ pub fn run() {
         cclient_handles.push(handle);
     }
 
-    let mut mclient_handles = Vec::new();
+    /*let mut mclient_handles = Vec::new();
     // Run media client on different threads
     for mut mclient in media_clients.into_iter() {
         let handle = thread::spawn(move || {
             mclient.run();
         });
         mclient_handles.push(handle);
-    }
+    }*/
 
     // Run GUI on main thread
     info!("[ {} ] Creating GUI", "Network Initializer".green());
@@ -337,7 +357,7 @@ pub fn run() {
 
     let options = eframe::NativeOptions::default();
     let _ = eframe::run_native(
-        "Drone Simulation GUI",
+        "Simulation Controller GUI",
         options,
         Box::new(|_cc| Ok(Box::new(gui))),
     );
@@ -353,7 +373,7 @@ pub fn run() {
         handle.join().unwrap();
     }
 
-    for handle in mclient_handles {
+    /*for handle in mclient_handles {
         handle.join().unwrap();
-    }
+    }*/
 }
