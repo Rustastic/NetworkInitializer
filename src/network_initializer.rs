@@ -256,6 +256,11 @@ pub fn run() {
     // Generate clients
     count = 0;
     for client in &config.client {
+        let mut cpkt_send = HashMap::<u8, Sender<Packet>>::new();
+        for neighbor in client.connected_drone_ids.iter() {
+            cpkt_send.insert(*neighbor, packet_send.get(neighbor).unwrap().clone());
+        }
+
         if count < half {
             // Create ChatClient
             let cclient = ChatClient::new(
@@ -263,7 +268,7 @@ pub fn run() {
                 cclient_event_send.clone(),
                 cclient_recv.get(&client.id).unwrap().clone(),
                 packet_recv.get(&client.id).unwrap().clone(),
-                packet_send.clone(),
+                cpkt_send,
             );
 
             // Add to structures
