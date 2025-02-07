@@ -26,6 +26,7 @@ use gui::{
 };
 use chat_client::ChatClient;
 //use media_client::MediaClient;
+//use ComunicationServer::CommunicationServer;
 use messages::client_commands::{ChatClientCommand, ChatClientEvent, MediaClientCommand, MediaClientEvent};
 
 /// Creates a factory function for generating drones of a specified type.
@@ -163,17 +164,16 @@ pub fn run() {
     // create hashmap to pass to clients
     let mut cclient_send = HashMap::<NodeId, (Sender<ChatClientCommand>, Sender<Packet>)>::new();
     let mut cclient_recv = HashMap::<NodeId, Receiver<ChatClientCommand>>::new();
-    let mut mclient_send = HashMap::<NodeId, Sender<MediaClientCommand>>::new();
+    let mut mclient_send = HashMap::<NodeId, (Sender<MediaClientCommand>, Sender<Packet>)>::new();
     let mut mclient_recv = HashMap::<NodeId, Receiver<MediaClientCommand>>::new();
 
     let (cclient_event_send, cclient_event_recv) = unbounded::<ChatClientEvent>();
-    //let (mclient_event_send, mclient_event_recv) = unbounded::<MediaClientEvent>();
+    let (mclient_event_send, mclient_event_recv) = unbounded::<MediaClientEvent>();
 
     let half = config.client.len() / 2; // Number of chat clients
     let mut count = 0;
     for client in &config.client {
         if count < half {
-            // Create ChatClient channels
             let (cclient_command_send, cclient_command_recv) = unbounded::<ChatClientCommand>();
             let (pkt_send, pkt_recv) = unbounded::<Packet>();
 
@@ -183,7 +183,14 @@ pub fn run() {
             cclient_recv.insert(client.id, cclient_command_recv);
             cclient_send.insert(client.id, (cclient_command_send, pkt_send));
         } else {
-            
+            let (mclient_command_send, mclient_command_recv) = unbounded::<MediaClientCommand>();
+            let (pkt_send, pkt_recv) = unbounded::<Packet>();
+
+            packet_send.insert(client.id, pkt_send.clone());
+            packet_recv.insert(client.id, pkt_recv);
+
+            mclient_recv.insert(client.id, mclient_command_recv);
+            mclient_send.insert(client.id, (mclient_command_send, pkt_send));
         }
         
         count += 1;
@@ -197,8 +204,8 @@ pub fn run() {
 
     // Create vector containing all the drones' function
     let drone_factories = vec![
-        drone_factory::<rusty_drones::RustyDrone>(),
-        //drone_factory::<LeDron_James::Drone>(),
+        /*drone_factory::<rusty_drones::RustyDrone>(),
+        drone_factory::<LeDron_James::Drone>(),
         drone_factory::<dr_ones::Drone>(),
         drone_factory::<skylink::SkyLinkDrone>(),
         drone_factory::<rustbusters_drone::RustBustersDrone>(),
@@ -206,8 +213,131 @@ pub fn run() {
         drone_factory::<rust_do_it::RustDoIt>(),
         drone_factory::<wg_2024_rust::drone::RustDrone>(),
         drone_factory::<null_pointer_drone::MyDrone>(),
+        drone_factory::<lockheedrustin_drone::LockheedRustin>(),*/
+
+        /* rusty_drones: OK
+        drone_factory::<rusty_drones::RustyDrone>(),
+        drone_factory::<rusty_drones::RustyDrone>(),
+        drone_factory::<rusty_drones::RustyDrone>(),
+        drone_factory::<rusty_drones::RustyDrone>(),
+        drone_factory::<rusty_drones::RustyDrone>(),
+        drone_factory::<rusty_drones::RustyDrone>(),
+        drone_factory::<rusty_drones::RustyDrone>(),
+        drone_factory::<rusty_drones::RustyDrone>(),
+        drone_factory::<rusty_drones::RustyDrone>(),
+        drone_factory::<rusty_drones::RustyDrone>(),*/
+
+        /* LeDron_James: Subtracts with overflow
+        drone_factory::<LeDron_James::Drone>(),
+        drone_factory::<LeDron_James::Drone>(),
+        drone_factory::<LeDron_James::Drone>(),
+        drone_factory::<LeDron_James::Drone>(),
+        drone_factory::<LeDron_James::Drone>(),
+        drone_factory::<LeDron_James::Drone>(),
+        drone_factory::<LeDron_James::Drone>(),
+        drone_factory::<LeDron_James::Drone>(),
+        drone_factory::<LeDron_James::Drone>(),
+        drone_factory::<LeDron_James::Drone>(),
+        */
+
+        /* dr_ones: Unwrap a None value
+        drone_factory::<dr_ones::Drone>(),
+        drone_factory::<dr_ones::Drone>(),
+        drone_factory::<dr_ones::Drone>(),
+        drone_factory::<dr_ones::Drone>(),
+        drone_factory::<dr_ones::Drone>(),
+        drone_factory::<dr_ones::Drone>(),
+        drone_factory::<dr_ones::Drone>(),
+        drone_factory::<dr_ones::Drone>(),
+        drone_factory::<dr_ones::Drone>(),
+        drone_factory::<dr_ones::Drone>(),*/
+        
+        /* skylink: Infinite Loop of FloodResponse
+        drone_factory::<skylink::SkyLinkDrone>(),
+        drone_factory::<skylink::SkyLinkDrone>(),
+        drone_factory::<skylink::SkyLinkDrone>(),
+        drone_factory::<skylink::SkyLinkDrone>(),
+        drone_factory::<skylink::SkyLinkDrone>(),
+        drone_factory::<skylink::SkyLinkDrone>(),
+        drone_factory::<skylink::SkyLinkDrone>(),
+        drone_factory::<skylink::SkyLinkDrone>(),
+        drone_factory::<skylink::SkyLinkDrone>(),
+        drone_factory::<skylink::SkyLinkDrone>(),*/
+
+        /* rustbusters_drone: OK*/
+        drone_factory::<rustbusters_drone::RustBustersDrone>(),
+        drone_factory::<rustbusters_drone::RustBustersDrone>(),
+        drone_factory::<rustbusters_drone::RustBustersDrone>(),
+        drone_factory::<rustbusters_drone::RustBustersDrone>(),
+        drone_factory::<rustbusters_drone::RustBustersDrone>(),
+        drone_factory::<rustbusters_drone::RustBustersDrone>(),
+        drone_factory::<rustbusters_drone::RustBustersDrone>(),
+        drone_factory::<rustbusters_drone::RustBustersDrone>(),
+        drone_factory::<rustbusters_drone::RustBustersDrone>(),
+        drone_factory::<rustbusters_drone::RustBustersDrone>(),
+
+        /* rust_roveri: OK
+        drone_factory::<rust_roveri::RustRoveri>(),
+        drone_factory::<rust_roveri::RustRoveri>(),
+        drone_factory::<rust_roveri::RustRoveri>(),
+        drone_factory::<rust_roveri::RustRoveri>(),
+        drone_factory::<rust_roveri::RustRoveri>(),
+        drone_factory::<rust_roveri::RustRoveri>(),
+        drone_factory::<rust_roveri::RustRoveri>(),
+        drone_factory::<rust_roveri::RustRoveri>(),
+        drone_factory::<rust_roveri::RustRoveri>(),
+        drone_factory::<rust_roveri::RustRoveri>(),
+        */
+        
+        /* rust_do_it: Loops infinite Nack saying destination is Drone
+        drone_factory::<rust_do_it::RustDoIt>(),
+        drone_factory::<rust_do_it::RustDoIt>(),
+        drone_factory::<rust_do_it::RustDoIt>(),
+        drone_factory::<rust_do_it::RustDoIt>(),
+        drone_factory::<rust_do_it::RustDoIt>(),
+        drone_factory::<rust_do_it::RustDoIt>(),
+        drone_factory::<rust_do_it::RustDoIt>(),
+        drone_factory::<rust_do_it::RustDoIt>(),
+        drone_factory::<rust_do_it::RustDoIt>(),
+        drone_factory::<rust_do_it::RustDoIt>(),
+        */
+
+        /* RustTheGroup: Panics because no path_trace
+        drone_factory::<wg_2024_rust::drone::RustDrone>(),
+        drone_factory::<wg_2024_rust::drone::RustDrone>(),
+        drone_factory::<wg_2024_rust::drone::RustDrone>(),
+        drone_factory::<wg_2024_rust::drone::RustDrone>(),
+        drone_factory::<wg_2024_rust::drone::RustDrone>(),
+        drone_factory::<wg_2024_rust::drone::RustDrone>(),
+        drone_factory::<wg_2024_rust::drone::RustDrone>(),
+        drone_factory::<wg_2024_rust::drone::RustDrone>(),
+        drone_factory::<wg_2024_rust::drone::RustDrone>(),
+        drone_factory::<wg_2024_rust::drone::RustDrone>(),*/
+
+        
+        /* null_pointer_drone: Panics because no path_trace
         drone_factory::<null_pointer_drone::MyDrone>(),
+        drone_factory::<null_pointer_drone::MyDrone>(),
+        drone_factory::<null_pointer_drone::MyDrone>(),
+        drone_factory::<null_pointer_drone::MyDrone>(),
+        drone_factory::<null_pointer_drone::MyDrone>(),
+        drone_factory::<null_pointer_drone::MyDrone>(),
+        drone_factory::<null_pointer_drone::MyDrone>(),
+        drone_factory::<null_pointer_drone::MyDrone>(),
+        drone_factory::<null_pointer_drone::MyDrone>(),
+        drone_factory::<null_pointer_drone::MyDrone>(),*/
+
+        /* lockheedrustin_drone: Infinite FloodResponse
         drone_factory::<lockheedrustin_drone::LockheedRustin>(),
+        drone_factory::<lockheedrustin_drone::LockheedRustin>(),
+        drone_factory::<lockheedrustin_drone::LockheedRustin>(),
+        drone_factory::<lockheedrustin_drone::LockheedRustin>(),
+        drone_factory::<lockheedrustin_drone::LockheedRustin>(),
+        drone_factory::<lockheedrustin_drone::LockheedRustin>(),
+        drone_factory::<lockheedrustin_drone::LockheedRustin>(),
+        drone_factory::<lockheedrustin_drone::LockheedRustin>(),
+        drone_factory::<lockheedrustin_drone::LockheedRustin>(),
+        drone_factory::<lockheedrustin_drone::LockheedRustin>(),*/
     ];
 
     info!("[ {} ] Creating Drones", "Network Initializer".green());
@@ -277,22 +407,17 @@ pub fn run() {
             // Add to structures
             chat_clients.push(cclient);
         } else {
-            // Create MediaClient channels
-            /*let (mclient_command_send, mclient_command_recv) = unbounded::<MediaClientCommand>();c
-
             // Create MediaClient
-            let mclient = MediaClient::new(
+            /*let mclient = MediaClient::new(
                 client.id,
                 mclient_event_send.clone(),
-                mclient_command_recv,
+                mclient_recv.get(&client.id).unwrap().clone(),
                 packet_recv.get(&client.id).unwrap().clone(),
-                packet_send.clone(),
+                cpkt_send,
             );
 
             // Add to structures
-            chat_clients.push(mclient);
-            mclient_send.insert(client.id, mclient_command_recv);ù
-            mclient_recv.insert(client.id, mclient_command_send);*/
+            media_clients.push(mclient);*/
         }
         // Add client to neighbor vec
         neighbor.insert(client.id, client.connected_drone_ids.clone());
