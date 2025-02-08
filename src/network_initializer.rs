@@ -563,8 +563,6 @@ pub fn run() {
     );
 
     // Join all threads
-    controller_handle.join().unwrap();
-
     for handle in drone_handles {
         handle.join().unwrap();
     }
@@ -580,4 +578,6 @@ pub fn run() {
     /*for handle in comm_server_handlers {
         handle.join().unwrap();
     }*/
+
+    controller_handle.join().unwrap();
 }
