@@ -19,15 +19,18 @@ use wg_2024::{
     packet::Packet,
 };
 
-use simulation_controller::SimulationController;
+use chat_client::ChatClient;
 use gui::{
     commands::{GUICommands, GUIEvents},
     SimCtrlGUI,
 };
-use chat_client::ChatClient;
+use simulation_controller::SimulationController;
 //use media_client::MediaClient;
-//use ComunicationServer::CommunicationServer;
-use messages::client_commands::{ChatClientCommand, ChatClientEvent, MediaClientCommand, MediaClientEvent};
+use messages::{
+    client_commands::{ChatClientCommand, ChatClientEvent, MediaClientCommand, MediaClientEvent},
+    server_commands::{CommunicationServerCommand, CommunicationServerEvent},
+};
+use ComunicationServer::communication_server::CommunicationServer;
 
 /// Creates a factory function for generating drones of a specified type.
 ///
@@ -158,32 +161,34 @@ pub fn run() {
     }
 
     // Create a vector to save servers
-    //let communication_servers = Vec::<CommunicationServers>::new();
-    //let mut comm_server_send = HashMap::<NodeId, (Sender<ServerCommand>, Sender<Packet>)>::new();
-    //let mut comm_server_recv = HashMap::<NodeId, Receiver<ServerCommand>>::new();
+    let communication_servers = Vec::<CommunicationServers>::new();
+    let mut comm_server_send =
+        HashMap::<NodeId, (Sender<CommunicationServerCommand>, Sender<Packet>)>::new();
+    let mut comm_server_recv = HashMap::<NodeId, Receiver<CommunicationServerEvent>>::new();
 
-    //let (comm_server_event_send, comm_server_event_recv) = unbounded::<ServerCommand>();
+    let (comm_server_event_send, comm_server_event_recv) = unbounded::<CommunicationServerEvent>();
 
     let third = config.server.len() / 3;
     let mut count = config.server.len();
-    /*for server in &config.server {
-        if  count > (third * 2) {
+    for server in &config.server {
+        if count > (third * 2) {
             // content-text
         } else if count > third {
             // content-media
         } else {
-            let (comm_server_command_send, comm_server_command_recv) = unbounded::<ServerCommand>();
+            let (comm_server_command_send, comm_server_command_recv) =
+                unbounded::<CommunicationServerCommand>();
             let (pkt_send, pkt_recv) = unbounded::<Packet>();
 
             packet_send.insert(server.id, pkt_send.clone());
             packet_recv.insert(server.id, pkt_recv);
 
-            comm_server_recv.insert(server.id, comm_server_command_recv);
+            comm_server_recv.insert(server.id, comm_server_event_recv);
             comm_server_send.insert(server.id, (comm_server_command_send, pkt_send));
         }
 
         count += 1;
-    }*/
+    }
 
     // Create vectors to save clients
     let mut chat_clients = Vec::<ChatClient>::new();
@@ -220,7 +225,7 @@ pub fn run() {
             mclient_recv.insert(client.id, mclient_command_recv);
             mclient_send.insert(client.id, (mclient_command_send, pkt_send));
         }
-        
+
         count += 1;
     }
 
@@ -279,7 +284,7 @@ pub fn run() {
         drone_factory::<dr_ones::Drone>(),
         drone_factory::<dr_ones::Drone>(),
         drone_factory::<dr_ones::Drone>(),*/
-        
+
         /* skylink: Infinite Loop of FloodResponse
         drone_factory::<skylink::SkyLinkDrone>(),
         drone_factory::<skylink::SkyLinkDrone>(),
@@ -315,7 +320,6 @@ pub fn run() {
         drone_factory::<rust_roveri::RustRoveri>(),
         drone_factory::<rust_roveri::RustRoveri>(),
         drone_factory::<rust_roveri::RustRoveri>(),
-        
         /* rust_do_it: Loops infinite Nack saying destination is Drone
         drone_factory::<rust_do_it::RustDoIt>(),
         drone_factory::<rust_do_it::RustDoIt>(),
@@ -341,7 +345,7 @@ pub fn run() {
         drone_factory::<wg_2024_rust::drone::RustDrone>(),
         drone_factory::<wg_2024_rust::drone::RustDrone>(),*/
 
-        
+
         /* null_pointer_drone: Panics because no path_trace
         drone_factory::<null_pointer_drone::MyDrone>(),
         drone_factory::<null_pointer_drone::MyDrone>(),
@@ -412,7 +416,7 @@ pub fn run() {
         "[ {} ] Creating ChatClient and MediaClient",
         "Network Initializer".green()
     );
-    
+
     // Generate clients
     count = 0;
     for client in &config.client {
@@ -448,23 +452,24 @@ pub fn run() {
         }
         // Add client to neighbor vec
         neighbor.insert(client.id, client.connected_drone_ids.clone());
-        
+
         count += 1;
-    } 
+    }
 
     // Server
     info!(
         "[ {} ] Creating Communication and Content Servers",
         "Network Initializer".green()
     );
-    /*count = 0;
+
+    count = 0;
     for server in &config.server {
         let mut spkt_send = HashMap::<u8, Sender<Packet>>::new();
         for neighbor in server.connected_drone_ids.iter() {
             spkt_send.insert(*neighbor, packet_send.get(neighbor).unwrap().clone());
         }
 
-        if  count > (third * 2) {
+        if count > (third * 2) {
             // content-text
         } else if count > third {
             // content-media
@@ -475,14 +480,14 @@ pub fn run() {
                 comm_server_recv.get(&server.id).unwrap().clone(),
                 packet_recv.get(&server.id).unwrap().clone(),
                 spkt_send,
-            )
+            );
 
             communication_servers.push(comm_server);
         }
         neighbor.insert(server.id, server.connected_drone_ids.clone());
 
         count += 1;
-    }*/
+    }
 
     // Create Channels for the GUI
     let (gui_command_send, gui_command_recv) = unbounded::<GUICommands>();
@@ -505,8 +510,8 @@ pub fn run() {
         cclient_event_recv,
         mclient_send,
         mclient_event_recv,
-        //comm_server_send,
-        //comm_server_event_recv,
+        comm_server_send,
+        comm_server_event_recv,
     );
 
     // Run simulation controller on different tread
@@ -541,19 +546,25 @@ pub fn run() {
         mclient_handles.push(handle);
     }*/
 
-    /*let mut comm_server_handle = Vec::new();
+    let mut comm_server_handle = Vec::new();
     // Run Servers
     for mut server in communication_servers.into_iter() {
-        let handle = thread::spawn( move || {
+        let handle = thread::spawn(move || {
             server.run();
         });
         comm_server_handle.push(handle);
-    }*/
+    }
 
     // Run GUI on main thread
     info!("[ {} ] Creating GUI", "Network Initializer".green());
     let gui = SimCtrlGUI::new(gui_command_send, gui_event_recv);
-    gui_send.send(GUIEvents::Topology(config.drone, config.client)).unwrap();
+    gui_send
+        .send(GUIEvents::Topology(
+            config.drone,
+            config.client,
+            config.server,
+        ))
+        .unwrap();
 
     let options = eframe::NativeOptions::default();
     let _ = eframe::run_native(
