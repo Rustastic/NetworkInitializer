@@ -176,18 +176,18 @@ pub fn run() {
         } else if count > third {
             // content-media
         } else {
-        let (comm_server_command_send, comm_server_command_recv) =
-            unbounded::<CommunicationServerCommand>();
-        let (pkt_send, pkt_recv) = unbounded::<Packet>();
+            let (comm_server_command_send, comm_server_command_recv) =
+                unbounded::<CommunicationServerCommand>();
+            let (pkt_send, pkt_recv) = unbounded::<Packet>();
 
-        packet_send.insert(server.id, pkt_send.clone());
-        packet_recv.insert(server.id, pkt_recv);
+            packet_send.insert(server.id, pkt_send.clone());
+            packet_recv.insert(server.id, pkt_recv);
 
-        comm_server_recv.insert(server.id, comm_server_command_recv.clone());
-        comm_server_send.insert(server.id, (comm_server_command_send, pkt_send));
+            comm_server_recv.insert(server.id, comm_server_command_recv.clone());
+            comm_server_send.insert(server.id, (comm_server_command_send, pkt_send));
         }
 
-        count += 1;
+        count -= 1;
     }
 
     // Create vectors to save clients
@@ -309,7 +309,7 @@ pub fn run() {
         drone_factory::<rustbusters_drone::RustBustersDrone>(),
         drone_factory::<rustbusters_drone::RustBustersDrone>(),*/
 
-        /* rust_roveri: OK*/
+        /* rust_roveri: OK
         drone_factory::<rust_roveri::RustRoveri>(),
         drone_factory::<rust_roveri::RustRoveri>(),
         drone_factory::<rust_roveri::RustRoveri>(),
@@ -319,7 +319,8 @@ pub fn run() {
         drone_factory::<rust_roveri::RustRoveri>(),
         drone_factory::<rust_roveri::RustRoveri>(),
         drone_factory::<rust_roveri::RustRoveri>(),
-        drone_factory::<rust_roveri::RustRoveri>(),
+        drone_factory::<rust_roveri::RustRoveri>(),*/
+
         /* rust_do_it: Loops infinite Nack saying destination is Drone
         drone_factory::<rust_do_it::RustDoIt>(),
         drone_factory::<rust_do_it::RustDoIt>(),
@@ -358,7 +359,7 @@ pub fn run() {
         drone_factory::<null_pointer_drone::MyDrone>(),
         drone_factory::<null_pointer_drone::MyDrone>(),*/
 
-        /* lockheedrustin_drone: Infinite FloodResponse
+        /* lockheedrustin_drone: Infinite FloodResponse*/
         drone_factory::<lockheedrustin_drone::LockheedRustin>(),
         drone_factory::<lockheedrustin_drone::LockheedRustin>(),
         drone_factory::<lockheedrustin_drone::LockheedRustin>(),
@@ -368,7 +369,7 @@ pub fn run() {
         drone_factory::<lockheedrustin_drone::LockheedRustin>(),
         drone_factory::<lockheedrustin_drone::LockheedRustin>(),
         drone_factory::<lockheedrustin_drone::LockheedRustin>(),
-        drone_factory::<lockheedrustin_drone::LockheedRustin>(),*/
+        drone_factory::<lockheedrustin_drone::LockheedRustin>(),
     ];
 
     info!("[ {} ] Creating Drones", "Network Initializer".green());
@@ -462,7 +463,7 @@ pub fn run() {
         "Network Initializer".green()
     );
 
-    count = config.server.len() / 3;
+    count = config.server.len();
     for server in &config.server {
         let mut spkt_send = HashMap::<u8, Sender<Packet>>::new();
         for neighbor in server.connected_drone_ids.iter() {
@@ -486,7 +487,7 @@ pub fn run() {
         }
         neighbor.insert(server.id, server.connected_drone_ids.clone());
 
-        count += 1;
+        count -= 1;
     }
 
     // Create Channels for the GUI
