@@ -22,9 +22,9 @@ egui_extras = { version = "0.31.0", features = ["default", "image"] }
 
 simulation_controller = { git = "https://github.com/Rustastic/SimulationController", branch = "gui"}
 chat-client = { git = "https://github.com/Rustastic/ChatClient" }
-#media_client = { git = "https://github.com/Rustastic/media_client" }
+media_client = { git = "https://github.com/Rustastic/media_client" }
 messages = { git = "https://github.com/Rustastic/Messages" }
-ComunicationServer = { git = "https://github.com/Rustastic/CommunicationServer" }
+communication_server = { git = "https://github.com/Rustastic/CommunicationServer" }
 
 gui = { git = "https://github.com/Rustastic/GUI" }
 

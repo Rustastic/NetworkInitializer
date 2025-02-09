@@ -20,17 +20,17 @@ use wg_2024::{
 };
 
 use chat_client::ChatClient;
+use communication_server::{communication_server::CommunicationServer, server::Server};
 use gui::{
     commands::{GUICommands, GUIEvents},
     SimCtrlGUI,
 };
-use simulation_controller::SimulationController;
-//use media_client::MediaClient;
+use media_client::media_client::MediaClient;
 use messages::{
     client_commands::{ChatClientCommand, ChatClientEvent, MediaClientCommand, MediaClientEvent},
     server_commands::{CommunicationServerCommand, CommunicationServerEvent},
 };
-use ComunicationServer::communication_server::CommunicationServer;
+use simulation_controller::SimulationController;
 
 /// Creates a factory function for generating drones of a specified type.
 ///
@@ -161,7 +161,7 @@ pub fn run() {
     }
 
     // Create a vector to save servers
-    let communication_servers = Vec::<CommunicationServers>::new();
+    let mut communication_servers = Vec::<CommunicationServer>::new();
     let mut comm_server_send =
         HashMap::<NodeId, (Sender<CommunicationServerCommand>, Sender<Packet>)>::new();
     let mut comm_server_recv = HashMap::<NodeId, Receiver<CommunicationServerEvent>>::new();
@@ -171,28 +171,28 @@ pub fn run() {
     let third = config.server.len() / 3;
     let mut count = config.server.len();
     for server in &config.server {
-        if count > (third * 2) {
+        /*if count > (third * 2) {
             // content-text
         } else if count > third {
             // content-media
-        } else {
-            let (comm_server_command_send, comm_server_command_recv) =
-                unbounded::<CommunicationServerCommand>();
-            let (pkt_send, pkt_recv) = unbounded::<Packet>();
+        } else {*/
+        let (comm_server_command_send, comm_server_command_recv) =
+            unbounded::<CommunicationServerCommand>();
+        let (pkt_send, pkt_recv) = unbounded::<Packet>();
 
-            packet_send.insert(server.id, pkt_send.clone());
-            packet_recv.insert(server.id, pkt_recv);
+        packet_send.insert(server.id, pkt_send.clone());
+        packet_recv.insert(server.id, pkt_recv);
 
-            comm_server_recv.insert(server.id, comm_server_event_recv);
-            comm_server_send.insert(server.id, (comm_server_command_send, pkt_send));
-        }
+        comm_server_recv.insert(server.id, comm_server_event_recv.clone());
+        comm_server_send.insert(server.id, (comm_server_command_send, pkt_send));
+        //}
 
         count += 1;
     }
 
     // Create vectors to save clients
     let mut chat_clients = Vec::<ChatClient>::new();
-    //let media_clients = Vec::<MediaClient>::new();
+    let mut media_clients = Vec::<MediaClient>::new();
 
     // create hashmap to pass to clients
     let mut cclient_send = HashMap::<NodeId, (Sender<ChatClientCommand>, Sender<Packet>)>::new();
@@ -439,7 +439,7 @@ pub fn run() {
             chat_clients.push(cclient);
         } else {
             // Create MediaClient
-            /*let mclient = MediaClient::new(
+            let mclient = MediaClient::new(
                 client.id,
                 mclient_event_send.clone(),
                 mclient_recv.get(&client.id).unwrap().clone(),
@@ -448,7 +448,7 @@ pub fn run() {
             );
 
             // Add to structures
-            media_clients.push(mclient);*/
+            media_clients.push(mclient);
         }
         // Add client to neighbor vec
         neighbor.insert(client.id, client.connected_drone_ids.clone());
@@ -469,21 +469,21 @@ pub fn run() {
             spkt_send.insert(*neighbor, packet_send.get(neighbor).unwrap().clone());
         }
 
-        if count > (third * 2) {
+        /*if count > (third * 2) {
             // content-text
         } else if count > third {
             // content-media
-        } else {
-            let comm_server = CommunicationServer::new(
-                server.id,
-                comm_server_event_send.clone(),
-                comm_server_recv.get(&server.id).unwrap().clone(),
-                packet_recv.get(&server.id).unwrap().clone(),
-                spkt_send,
-            );
+        } else {*/
+        let comm_server = CommunicationServer::new(
+            server.id,
+            packet_recv.get(&server.id).unwrap().clone(),
+            spkt_send,
+            comm_server_event_send.clone(),
+            comm_server_recv.get(&server.id).unwrap().clone(),
+        );
 
-            communication_servers.push(comm_server);
-        }
+        communication_servers.push(comm_server);
+        //}
         neighbor.insert(server.id, server.connected_drone_ids.clone());
 
         count += 1;
@@ -537,22 +537,22 @@ pub fn run() {
         cclient_handles.push(handle);
     }
 
-    /*let mut mclient_handles = Vec::new();
+    let mut mclient_handles = Vec::new();
     // Run media client on different threads
     for mut mclient in media_clients.into_iter() {
         let handle = thread::spawn(move || {
             mclient.run();
         });
         mclient_handles.push(handle);
-    }*/
+    }
 
-    let mut comm_server_handle = Vec::new();
+    let mut comm_server_handles = Vec::new();
     // Run Servers
     for mut server in communication_servers.into_iter() {
         let handle = thread::spawn(move || {
             server.run();
         });
-        comm_server_handle.push(handle);
+        comm_server_handles.push(handle);
     }
 
     // Run GUI on main thread
@@ -582,13 +582,13 @@ pub fn run() {
         handle.join().unwrap();
     }
 
-    /*for handle in mclient_handles {
+    for handle in mclient_handles {
         handle.join().unwrap();
-    }*/
+    }
 
-    /*for handle in comm_server_handlers {
+    for handle in comm_server_handles {
         handle.join().unwrap();
-    }*/
+    }
 
     controller_handle.join().unwrap();
 }
