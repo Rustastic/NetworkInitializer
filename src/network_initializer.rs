@@ -164,18 +164,18 @@ pub fn run() {
     let mut communication_servers = Vec::<CommunicationServer>::new();
     let mut comm_server_send =
         HashMap::<NodeId, (Sender<CommunicationServerCommand>, Sender<Packet>)>::new();
-    let mut comm_server_recv = HashMap::<NodeId, Receiver<CommunicationServerEvent>>::new();
+    let mut comm_server_recv = HashMap::<NodeId, Receiver<CommunicationServerCommand>>::new();
 
     let (comm_server_event_send, comm_server_event_recv) = unbounded::<CommunicationServerEvent>();
 
     let third = config.server.len() / 3;
     let mut count = config.server.len();
     for server in &config.server {
-        /*if count > (third * 2) {
+        if count > (third * 2) {
             // content-text
         } else if count > third {
             // content-media
-        } else {*/
+        } else {
         let (comm_server_command_send, comm_server_command_recv) =
             unbounded::<CommunicationServerCommand>();
         let (pkt_send, pkt_recv) = unbounded::<Packet>();
@@ -183,9 +183,9 @@ pub fn run() {
         packet_send.insert(server.id, pkt_send.clone());
         packet_recv.insert(server.id, pkt_recv);
 
-        comm_server_recv.insert(server.id, comm_server_event_recv.clone());
+        comm_server_recv.insert(server.id, comm_server_command_recv.clone());
         comm_server_send.insert(server.id, (comm_server_command_send, pkt_send));
-        //}
+        }
 
         count += 1;
     }
@@ -420,7 +420,7 @@ pub fn run() {
     // Generate clients
     count = 0;
     for client in &config.client {
-        let mut cpkt_send = HashMap::<u8, Sender<Packet>>::new();
+        let mut cpkt_send: HashMap<u8, Sender<Packet>> = HashMap::<u8, Sender<Packet>>::new();
         for neighbor in client.connected_drone_ids.iter() {
             cpkt_send.insert(*neighbor, packet_send.get(neighbor).unwrap().clone());
         }
@@ -462,28 +462,28 @@ pub fn run() {
         "Network Initializer".green()
     );
 
-    count = 0;
+    count = config.server.len() / 3;
     for server in &config.server {
         let mut spkt_send = HashMap::<u8, Sender<Packet>>::new();
         for neighbor in server.connected_drone_ids.iter() {
             spkt_send.insert(*neighbor, packet_send.get(neighbor).unwrap().clone());
         }
 
-        /*if count > (third * 2) {
+        if count > (third * 2) {
             // content-text
         } else if count > third {
             // content-media
-        } else {*/
-        let comm_server = CommunicationServer::new(
-            server.id,
-            packet_recv.get(&server.id).unwrap().clone(),
-            spkt_send,
-            comm_server_event_send.clone(),
-            comm_server_recv.get(&server.id).unwrap().clone(),
-        );
+        } else {
+            let comm_server = CommunicationServer::new(
+                server.id,
+                packet_recv.get(&server.id).unwrap().clone(),
+                spkt_send,
+                comm_server_event_send.clone(),
+                comm_server_recv.get(&server.id).unwrap().clone(),
+            );
 
-        communication_servers.push(comm_server);
-        //}
+            communication_servers.push(comm_server);
+        }
         neighbor.insert(server.id, server.connected_drone_ids.clone());
 
         count += 1;
