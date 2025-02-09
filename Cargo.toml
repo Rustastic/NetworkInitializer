@@ -24,7 +24,7 @@ simulation_controller = { git = "https://github.com/Rustastic/SimulationControll
 chat-client = { git = "https://github.com/Rustastic/ChatClient" }
 media_client = { git = "https://github.com/Rustastic/media_client" }
 messages = { git = "https://github.com/Rustastic/Messages" }
-communication_server = { git = "https://github.com/Rustastic/CommunicationServer" }
+communication_server = { git = "https://github.com/Rustastic/Servers" }
 
 gui = { git = "https://github.com/Rustastic/GUI" }
 

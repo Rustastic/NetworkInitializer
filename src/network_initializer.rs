@@ -20,7 +20,9 @@ use wg_2024::{
 };
 
 use chat_client::ChatClient;
-use communication_server::{communication_server::CommunicationServer, server::Server};
+use communication_server::servers::{
+    communication_server::CommunicationServer, content_server::ContentServer,
+};
 use gui::{
     commands::{GUICommands, GUIEvents},
     SimCtrlGUI,
@@ -28,7 +30,11 @@ use gui::{
 use media_client::media_client::MediaClient;
 use messages::{
     client_commands::{ChatClientCommand, ChatClientEvent, MediaClientCommand, MediaClientEvent},
-    server_commands::{CommunicationServerCommand, CommunicationServerEvent},
+    high_level_messages::ServerType,
+    server_commands::{
+        CommunicationServerCommand, CommunicationServerEvent, ContentServerCommand,
+        ContentServerEvent,
+    },
 };
 use simulation_controller::SimulationController;
 
@@ -166,15 +172,45 @@ pub fn run() {
         HashMap::<NodeId, (Sender<CommunicationServerCommand>, Sender<Packet>)>::new();
     let mut comm_server_recv = HashMap::<NodeId, Receiver<CommunicationServerCommand>>::new();
 
+    let mut text_servers = Vec::<ContentServer>::new();
+    let mut text_server_send =
+        HashMap::<NodeId, (Sender<ContentServerCommand>, Sender<Packet>)>::new();
+    let mut text_server_recv = HashMap::<NodeId, Receiver<ContentServerCommand>>::new();
+
+    let mut media_servers = Vec::<ContentServer>::new();
+    let mut media_server_send =
+        HashMap::<NodeId, (Sender<ContentServerCommand>, Sender<Packet>)>::new();
+    let mut media_server_recv = HashMap::<NodeId, Receiver<ContentServerCommand>>::new();
+
     let (comm_server_event_send, comm_server_event_recv) = unbounded::<CommunicationServerEvent>();
+    let (text_server_event_send, text_server_event_recv) = unbounded::<ContentServerEvent>();
+    let (media_server_event_send, media_server_event_recv) = unbounded::<ContentServerEvent>();
 
     let third = config.server.len() / 3;
     let mut count = config.server.len();
     for server in &config.server {
         if count > (third * 2) {
             // content-text
+            let (text_server_command_send, text_server_command_recv) =
+                unbounded::<ContentServerCommand>();
+            let (pkt_send, pkt_recv) = unbounded::<Packet>();
+
+            packet_send.insert(server.id, pkt_send.clone());
+            packet_recv.insert(server.id, pkt_recv);
+
+            text_server_recv.insert(server.id, text_server_command_recv.clone());
+            text_server_send.insert(server.id, (text_server_command_send, pkt_send));
         } else if count > third {
             // content-media
+            let (media_server_command_send, media_server_command_recv) =
+                unbounded::<ContentServerCommand>();
+            let (pkt_send, pkt_recv) = unbounded::<Packet>();
+
+            packet_send.insert(server.id, pkt_send.clone());
+            packet_recv.insert(server.id, pkt_recv);
+
+            media_server_recv.insert(server.id, media_server_command_recv.clone());
+            media_server_send.insert(server.id, (media_server_command_send, pkt_send));
         } else {
             let (comm_server_command_send, comm_server_command_recv) =
                 unbounded::<CommunicationServerCommand>();
@@ -297,7 +333,7 @@ pub fn run() {
         drone_factory::<skylink::SkyLinkDrone>(),
         drone_factory::<skylink::SkyLinkDrone>(),*/
 
-        /* rustbusters_drone: OK
+        /* rustbusters_drone: OK*/
         drone_factory::<rustbusters_drone::RustBustersDrone>(),
         drone_factory::<rustbusters_drone::RustBustersDrone>(),
         drone_factory::<rustbusters_drone::RustBustersDrone>(),
@@ -307,8 +343,7 @@ pub fn run() {
         drone_factory::<rustbusters_drone::RustBustersDrone>(),
         drone_factory::<rustbusters_drone::RustBustersDrone>(),
         drone_factory::<rustbusters_drone::RustBustersDrone>(),
-        drone_factory::<rustbusters_drone::RustBustersDrone>(),*/
-
+        drone_factory::<rustbusters_drone::RustBustersDrone>(),
         /* rust_roveri: OK
         drone_factory::<rust_roveri::RustRoveri>(),
         drone_factory::<rust_roveri::RustRoveri>(),
@@ -359,7 +394,7 @@ pub fn run() {
         drone_factory::<null_pointer_drone::MyDrone>(),
         drone_factory::<null_pointer_drone::MyDrone>(),*/
 
-        /* lockheedrustin_drone: Infinite FloodResponse*/
+        /* lockheedrustin_drone: Infinite FloodResponse
         drone_factory::<lockheedrustin_drone::LockheedRustin>(),
         drone_factory::<lockheedrustin_drone::LockheedRustin>(),
         drone_factory::<lockheedrustin_drone::LockheedRustin>(),
@@ -369,7 +404,7 @@ pub fn run() {
         drone_factory::<lockheedrustin_drone::LockheedRustin>(),
         drone_factory::<lockheedrustin_drone::LockheedRustin>(),
         drone_factory::<lockheedrustin_drone::LockheedRustin>(),
-        drone_factory::<lockheedrustin_drone::LockheedRustin>(),
+        drone_factory::<lockheedrustin_drone::LockheedRustin>(),*/
     ];
 
     info!("[ {} ] Creating Drones", "Network Initializer".green());
@@ -472,8 +507,28 @@ pub fn run() {
 
         if count > (third * 2) {
             // content-text
+            let text_server = ContentServer::new(
+                server.id,
+                packet_recv.get(&server.id).unwrap().clone(),
+                spkt_send,
+                text_server_event_send.clone(),
+                text_server_recv.get(&server.id).unwrap().clone(),
+                ServerType::Text,
+            );
+
+            text_servers.push(text_server);
         } else if count > third {
             // content-media
+            let media_server = ContentServer::new(
+                server.id,
+                packet_recv.get(&server.id).unwrap().clone(),
+                spkt_send,
+                media_server_event_send.clone(),
+                media_server_recv.get(&server.id).unwrap().clone(),
+                ServerType::Media,
+            );
+
+            media_servers.push(media_server);
         } else {
             let comm_server = CommunicationServer::new(
                 server.id,
@@ -513,6 +568,10 @@ pub fn run() {
         mclient_event_recv,
         comm_server_send,
         comm_server_event_recv,
+        text_server_send,
+        text_server_event_recv,
+        media_server_send,
+        media_server_event_recv,
     );
 
     // Run simulation controller on different tread
@@ -556,6 +615,24 @@ pub fn run() {
         comm_server_handles.push(handle);
     }
 
+    let mut text_server_handles = Vec::new();
+    // Run Servers
+    for mut server in text_servers.into_iter() {
+        let handle = thread::spawn(move || {
+            server.run();
+        });
+        text_server_handles.push(handle);
+    }
+
+    let mut media_server_handles = Vec::new();
+    // Run Servers
+    for mut server in media_servers.into_iter() {
+        let handle = thread::spawn(move || {
+            server.run();
+        });
+        media_server_handles.push(handle);
+    }
+
     // Run GUI on main thread
     info!("[ {} ] Creating GUI", "Network Initializer".green());
     let gui = SimCtrlGUI::new(gui_command_send, gui_event_recv);
@@ -588,6 +665,14 @@ pub fn run() {
     }
 
     for handle in comm_server_handles {
+        handle.join().unwrap();
+    }
+
+    for handle in text_server_handles {
+        handle.join().unwrap();
+    }
+
+    for handle in media_server_handles {
         handle.join().unwrap();
     }
 
