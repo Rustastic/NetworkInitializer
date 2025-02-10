@@ -23,18 +23,18 @@ use chat_client::ChatClient;
 use communication_server::servers::{
     communication_server::CommunicationServer, content_server::ContentServer,
 };
-use gui::{
-    commands::{GUICommands, GUIEvents},
-    SimCtrlGUI,
-};
+
+use gui::SimCtrlGUI;
+
 use media_client::media_client::MediaClient;
 use messages::{
     client_commands::{ChatClientCommand, ChatClientEvent, MediaClientCommand, MediaClientEvent},
-    high_level_messages::ServerType,
     server_commands::{
         CommunicationServerCommand, CommunicationServerEvent, ContentServerCommand,
         ContentServerEvent,
     },
+    high_level_messages::ServerType,
+    gui_commands::{GUICommands, GUIEvents},
 };
 use simulation_controller::SimulationController;
 
