@@ -20,7 +20,6 @@ connected_drone_ids = [2]
 id = 13
 connected_drone_ids = [1]
 
-
 [[server]]
 id = 15
 connected_drone_ids = [1, 2]
