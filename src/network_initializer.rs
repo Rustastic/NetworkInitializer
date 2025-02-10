@@ -38,21 +38,6 @@ use messages::{
 };
 use simulation_controller::SimulationController;
 
-/// Creates a factory function for generating drones of a specified type.
-///
-/// # Type Parameters
-/// * `T` - The type of drone to be created. Must implement the `Drone` trait.
-///
-/// # Returns
-/// * A boxed closure that takes the following arguments and returns a boxed drone:
-///     - `ConfigDrone`: Configuration for the drone.
-///     - `Sender<DroneEvent>`: Sender channel for drone events.
-///     - `HashMap<NodeId, Receiver<DroneCommand>>`: Map of command receiver channels for each node.
-///     - `HashMap<NodeId, Sender<Packet>>`: Map of packet sender channels for each node.
-///     - `HashMap<NodeId, Receiver<Packet>>`: Map of packet receiver channels for each node.
-///
-/// # Panics
-/// * If the required channels for a drone are not found in the provided hashmaps.
 fn drone_factory<T>() -> Box<
     dyn Fn(
         &ConfigDrone,
@@ -101,17 +86,6 @@ where
     )
 }
 
-/// Opens a configuration file and parses it into a `Config` object.
-///
-/// # Arguments
-/// * `path` - A string slice representing the path to the configuration file.
-///
-/// # Returns
-/// * `Config` - The parsed configuration object.
-///
-/// # Panics
-/// * If the file cannot be read.
-/// * If the TOML data cannot be parsed.
 fn open(path: &str) -> Config {
     // Read content of file src/config.toml
     let config_data = fs::read_to_string(path).expect("Unable to read config file");
@@ -119,19 +93,6 @@ fn open(path: &str) -> Config {
     toml::from_str(&config_data).expect("Unable to parse TOML")
 }
 
-/// Initializes and runs the drone simulation.
-///
-/// This function performs the following steps:
-/// 1. Opens and parses the configuration file.
-/// 2. Creates communication channels for events, packets, and commands.
-/// 3. Instantiates drones using factory functions.
-/// 4. Creates a simulation controller and initializes it with drones and neighbors.
-/// 5. Runs the simulation controller and drones on separate threads.
-/// 6. Joins all threads to ensure proper execution.
-///
-/// # Panics
-/// * If the configuration contains fewer than 10 drones.
-/// * If required channels or factories are missing during drone initialization.
 pub fn run() {
     info!(
         "[ {} ] Starting Network Initializer",
@@ -140,57 +101,60 @@ pub fn run() {
     // Open and read File
     let config = open("src/config.toml");
 
-    // Event channels
-    let (event_send, event_recv) = unbounded::<DroneEvent>();
-
     // Packet channels
     let mut packet_send = HashMap::<NodeId, Sender<Packet>>::new();
     let mut packet_recv = HashMap::<NodeId, Receiver<Packet>>::new();
 
-    // Command channels
+    // Drones
+    let mut drones: Vec<Box<dyn Drone>> = Vec::new();
     let mut command_send = HashMap::<NodeId, Sender<DroneCommand>>::new();
     let mut command_recv = HashMap::<NodeId, Receiver<DroneCommand>>::new();
 
-    // Create channels
+    let (event_send, event_recv) = unbounded::<DroneEvent>();
+
+    // Fill drone channels
     for drone in &config.drone {
         let id = drone.id;
 
-        // Packet channel
         let (pkt_send, pkt_recv) = unbounded::<Packet>();
         packet_send.insert(id, pkt_send);
         packet_recv.insert(id, pkt_recv);
 
-        // Command channel
         let (cmd_send, cmd_recv) = unbounded::<DroneCommand>();
         command_send.insert(id, cmd_send);
         command_recv.insert(id, cmd_recv);
     }
 
-    // Create a vector to save servers
+    // Communication Servers
     let mut communication_servers = Vec::<CommunicationServer>::new();
     let mut comm_server_send =
         HashMap::<NodeId, (Sender<CommunicationServerCommand>, Sender<Packet>)>::new();
     let mut comm_server_recv = HashMap::<NodeId, Receiver<CommunicationServerCommand>>::new();
 
+    let (comm_server_event_send, comm_server_event_recv) = unbounded::<CommunicationServerEvent>();
+
+    // TextContentServers
     let mut text_servers = Vec::<ContentServer>::new();
     let mut text_server_send =
         HashMap::<NodeId, (Sender<ContentServerCommand>, Sender<Packet>)>::new();
     let mut text_server_recv = HashMap::<NodeId, Receiver<ContentServerCommand>>::new();
 
+    let (text_server_event_send, text_server_event_recv) = unbounded::<ContentServerEvent>();
+
+    // MediaContentServers
     let mut media_servers = Vec::<ContentServer>::new();
     let mut media_server_send =
         HashMap::<NodeId, (Sender<ContentServerCommand>, Sender<Packet>)>::new();
     let mut media_server_recv = HashMap::<NodeId, Receiver<ContentServerCommand>>::new();
 
-    let (comm_server_event_send, comm_server_event_recv) = unbounded::<CommunicationServerEvent>();
-    let (text_server_event_send, text_server_event_recv) = unbounded::<ContentServerEvent>();
     let (media_server_event_send, media_server_event_recv) = unbounded::<ContentServerEvent>();
 
+    // Fill servers channels
     let third = config.server.len() / 3;
     let mut count = config.server.len();
     for server in &config.server {
         if count > (third * 2) {
-            // content-text
+            // TextContentServer
             let (text_server_command_send, text_server_command_recv) =
                 unbounded::<ContentServerCommand>();
             let (pkt_send, pkt_recv) = unbounded::<Packet>();
@@ -201,7 +165,7 @@ pub fn run() {
             text_server_recv.insert(server.id, text_server_command_recv.clone());
             text_server_send.insert(server.id, (text_server_command_send, pkt_send));
         } else if count > third {
-            // content-media
+            // MediaContentServer
             let (media_server_command_send, media_server_command_recv) =
                 unbounded::<ContentServerCommand>();
             let (pkt_send, pkt_recv) = unbounded::<Packet>();
@@ -212,6 +176,7 @@ pub fn run() {
             media_server_recv.insert(server.id, media_server_command_recv.clone());
             media_server_send.insert(server.id, (media_server_command_send, pkt_send));
         } else {
+            // CommunicationContentServer
             let (comm_server_command_send, comm_server_command_recv) =
                 unbounded::<CommunicationServerCommand>();
             let (pkt_send, pkt_recv) = unbounded::<Packet>();
@@ -226,23 +191,26 @@ pub fn run() {
         count -= 1;
     }
 
-    // Create vectors to save clients
+    // ChatClients
     let mut chat_clients = Vec::<ChatClient>::new();
-    let mut media_clients = Vec::<MediaClient>::new();
-
-    // create hashmap to pass to clients
     let mut cclient_send = HashMap::<NodeId, (Sender<ChatClientCommand>, Sender<Packet>)>::new();
     let mut cclient_recv = HashMap::<NodeId, Receiver<ChatClientCommand>>::new();
+
+    let (cclient_event_send, cclient_event_recv) = unbounded::<ChatClientEvent>();
+
+    // MediaClient
+    let mut media_clients = Vec::<MediaClient>::new();
     let mut mclient_send = HashMap::<NodeId, (Sender<MediaClientCommand>, Sender<Packet>)>::new();
     let mut mclient_recv = HashMap::<NodeId, Receiver<MediaClientCommand>>::new();
 
-    let (cclient_event_send, cclient_event_recv) = unbounded::<ChatClientEvent>();
     let (mclient_event_send, mclient_event_recv) = unbounded::<MediaClientEvent>();
 
-    let half = config.client.len() / 2; // Number of chat clients
+    // Fill the client server
+    let half = config.client.len() / 2;
     count = 0;
     for client in &config.client {
         if count < half {
+            // ChatClient
             let (cclient_command_send, cclient_command_recv) = unbounded::<ChatClientCommand>();
             let (pkt_send, pkt_recv) = unbounded::<Packet>();
 
@@ -252,6 +220,7 @@ pub fn run() {
             cclient_recv.insert(client.id, cclient_command_recv);
             cclient_send.insert(client.id, (cclient_command_send, pkt_send));
         } else {
+            // Media Client
             let (mclient_command_send, mclient_command_recv) = unbounded::<MediaClientCommand>();
             let (pkt_send, pkt_recv) = unbounded::<Packet>();
 
@@ -264,9 +233,6 @@ pub fn run() {
 
         count += 1;
     }
-
-    // Vector of drones
-    let mut drones: Vec<Box<dyn Drone>> = Vec::new();
 
     // Hashmap of sender channel of drones
     let mut drones_hashmap = HashMap::<NodeId, (Sender<DroneCommand>, Sender<Packet>)>::new();
@@ -412,7 +378,6 @@ pub fn run() {
     for (n, drone) in config.drone.iter().enumerate() {
         // Get right function
         if let Some(factory) = drone_factories.get(n) {
-            // create drone
             let new_drone = factory(
                 drone,
                 &event_send,
@@ -421,10 +386,8 @@ pub fn run() {
                 &packet_recv,
             );
 
-            // Add the new drone to the list and hashmap
             drones.push(new_drone);
 
-            // Fill drone Hashmap
             if let Some(pkt_send) = packet_send.get(&drone.id) {
                 if let Some(cmd_send) = command_send.get(&drone.id) {
                     drones_hashmap.insert(drone.id, (cmd_send.clone(), pkt_send.clone()));
@@ -439,10 +402,8 @@ pub fn run() {
         }
     }
 
-    // Create an hashmap containing neighbors
+    // Add to neighbor hashmap
     let mut neighbor = HashMap::<NodeId, Vec<NodeId>>::new();
-
-    // Fill the hashmap
     for drone in &config.drone {
         neighbor.insert(drone.id, drone.connected_node_ids.clone());
     }
@@ -456,13 +417,14 @@ pub fn run() {
     // Generate clients
     count = 0;
     for client in &config.client {
+        // Get all neighbor Sender<Packet> channel
         let mut cpkt_send: HashMap<u8, Sender<Packet>> = HashMap::<u8, Sender<Packet>>::new();
         for neighbor in client.connected_drone_ids.iter() {
             cpkt_send.insert(*neighbor, packet_send.get(neighbor).unwrap().clone());
         }
 
         if count < half {
-            // Create ChatClient
+            // ChatClient
             let cclient = ChatClient::new(
                 client.id,
                 cclient_event_send.clone(),
@@ -470,11 +432,9 @@ pub fn run() {
                 packet_recv.get(&client.id).unwrap().clone(),
                 cpkt_send,
             );
-
-            // Add to structures
             chat_clients.push(cclient);
         } else {
-            // Create MediaClient
+            // MediaClient
             let mclient = MediaClient::new(
                 client.id,
                 mclient_event_send.clone(),
@@ -482,11 +442,9 @@ pub fn run() {
                 packet_recv.get(&client.id).unwrap().clone(),
                 cpkt_send,
             );
-
-            // Add to structures
             media_clients.push(mclient);
         }
-        // Add client to neighbor vec
+        // Add client to neighbor hashmap
         neighbor.insert(client.id, client.connected_drone_ids.clone());
 
         count += 1;
@@ -500,13 +458,14 @@ pub fn run() {
 
     count = config.server.len();
     for server in &config.server {
+        // Get all neighbor Sender<Packet> channel
         let mut spkt_send = HashMap::<u8, Sender<Packet>>::new();
         for neighbor in server.connected_drone_ids.iter() {
             spkt_send.insert(*neighbor, packet_send.get(neighbor).unwrap().clone());
         }
 
         if count > (third * 2) {
-            // content-text
+            // TextContentServer
             let text_server = ContentServer::new(
                 server.id,
                 packet_recv.get(&server.id).unwrap().clone(),
@@ -515,10 +474,9 @@ pub fn run() {
                 text_server_recv.get(&server.id).unwrap().clone(),
                 ServerType::Text,
             );
-
             text_servers.push(text_server);
         } else if count > third {
-            // content-media
+            // MediaContentServer
             let media_server = ContentServer::new(
                 server.id,
                 packet_recv.get(&server.id).unwrap().clone(),
@@ -527,9 +485,9 @@ pub fn run() {
                 media_server_recv.get(&server.id).unwrap().clone(),
                 ServerType::Media,
             );
-
             media_servers.push(media_server);
         } else {
+            // CommunicationServer
             let comm_server = CommunicationServer::new(
                 server.id,
                 packet_recv.get(&server.id).unwrap().clone(),
@@ -537,20 +495,20 @@ pub fn run() {
                 comm_server_event_send.clone(),
                 comm_server_recv.get(&server.id).unwrap().clone(),
             );
-
             communication_servers.push(comm_server);
         }
+        // Add server to neighbor hashmap
         neighbor.insert(server.id, server.connected_drone_ids.clone());
 
         count -= 1;
     }
 
-    // Create Channels for the GUI
+    // GUI channels
     let (gui_command_send, gui_command_recv) = unbounded::<GUICommands>();
     let (gui_event_send, gui_event_recv) = unbounded::<GUIEvents>();
     let gui_send = gui_event_send.clone();
 
-    // Create and initialize the Simulation Controller
+    // Simulation Controller
     info!(
         "[ {} ] Creating Simulation Controller",
         "Network Initializer".green()
@@ -573,6 +531,8 @@ pub fn run() {
         media_server_send,
         media_server_event_recv,
     );
+
+    // Run all members on different thread
 
     // Run simulation controller on different tread
     let controller_handle = thread::spawn(move || {
@@ -633,7 +593,7 @@ pub fn run() {
         media_server_handles.push(handle);
     }
 
-    // Run GUI on main thread
+    // GUI
     info!("[ {} ] Creating GUI", "Network Initializer".green());
     let gui = SimCtrlGUI::new(gui_command_send, gui_event_recv);
     gui_send
@@ -644,6 +604,7 @@ pub fn run() {
         ))
         .unwrap();
 
+    // Run GUI on main thread
     let options = eframe::NativeOptions::default();
     let _ = eframe::run_native(
         "Simulation Controller GUI",
