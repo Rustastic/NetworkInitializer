@@ -1,8 +1,4 @@
 use slog::{slog_o, Drain};
-use slog_async;
-use slog_scope;
-use slog_stdlog;
-use slog_term;
 
 mod network_initializer;
 
@@ -13,7 +9,7 @@ fn main() {
     let logger = slog::Logger::root(drain, slog_o!("version" => env!("CARGO_PKG_VERSION")));
 
     let _scope_guard = slog_scope::set_global_logger(logger);
-    let _log_guard = slog_stdlog::init_with_level(log::Level::Info).unwrap();
+    slog_stdlog::init_with_level(log::Level::Info).unwrap();
 
     println!("Start!");
 
