@@ -21,12 +21,12 @@ use gui::SimCtrlGUI;
 use media_client::media_client::MediaClient;
 use messages::{
     client_commands::{ChatClientCommand, ChatClientEvent, MediaClientCommand, MediaClientEvent},
+    gui_commands::{GUICommands, GUIEvents},
+    high_level_messages::ServerType,
     server_commands::{
         CommunicationServerCommand, CommunicationServerEvent, ContentServerCommand,
         ContentServerEvent,
     },
-    high_level_messages::ServerType,
-    gui_commands::{GUICommands, GUIEvents},
 };
 use simulation_controller::SimulationController;
 
@@ -74,7 +74,7 @@ where
             } else {
                 panic!("Packet receiver not found for drone {}", drone.id);
             }
-        }
+        },
     )
 }
 
@@ -252,7 +252,8 @@ pub fn run() {
         drone_factory::<rustbusters_drone::RustBustersDrone>(),
         drone_factory::<rustbusters_drone::RustBustersDrone>(),
         drone_factory::<rustbusters_drone::RustBustersDrone>(),
-        drone_factory::<rustbusters_drone::RustBustersDrone>(),];
+        drone_factory::<rustbusters_drone::RustBustersDrone>(),
+    ];
 
     info!("[ {} ] Creating Drones", "Network Initializer".green());
     // Generate drones using factories
