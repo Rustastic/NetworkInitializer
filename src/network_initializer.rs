@@ -1,11 +1,3 @@
-//! This file contains the Rustastic Network Initializer
-//!
-//! File:   `network_initializer.rs``
-//!
-//! Brief:  Main file for the Rustastic Network Initializer, containing the necessary step to initialize the drones, simulation controller, server, client
-//!
-//! Author: Alessandro Busola
-
 use colored::Colorize;
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use log::info;
@@ -38,15 +30,15 @@ use messages::{
 };
 use simulation_controller::SimulationController;
 
-fn drone_factory<T>() -> Box<
-    dyn Fn(
-        &ConfigDrone,
-        &Sender<DroneEvent>,
-        &HashMap<NodeId, Receiver<DroneCommand>>,
-        &HashMap<NodeId, Sender<Packet>>,
-        &HashMap<NodeId, Receiver<Packet>>,
-    ) -> Box<dyn Drone>,
->
+type DroneFactoryFn = dyn Fn(
+    &ConfigDrone,
+    &Sender<DroneEvent>,
+    &HashMap<NodeId, Receiver<DroneCommand>>,
+    &HashMap<NodeId, Sender<Packet>>,
+    &HashMap<NodeId, Receiver<Packet>>,
+) -> Box<dyn Drone>;
+
+fn drone_factory<T>() -> Box<DroneFactoryFn>
 where
     T: Drone + 'static,
 {
@@ -308,7 +300,7 @@ pub fn run() {
     for client in &config.client {
         // Get all neighbor Sender<Packet> channel
         let mut cpkt_send: HashMap<u8, Sender<Packet>> = HashMap::<u8, Sender<Packet>>::new();
-        for neighbor in client.connected_drone_ids.iter() {
+        for neighbor in &client.connected_drone_ids {
             cpkt_send.insert(*neighbor, packet_send.get(neighbor).unwrap().clone());
         }
 
@@ -349,7 +341,7 @@ pub fn run() {
     for server in &config.server {
         // Get all neighbor Sender<Packet> channel
         let mut spkt_send = HashMap::<u8, Sender<Packet>>::new();
-        for neighbor in server.connected_drone_ids.iter() {
+        for neighbor in &server.connected_drone_ids {
             spkt_send.insert(*neighbor, packet_send.get(neighbor).unwrap().clone());
         }
 
@@ -430,7 +422,7 @@ pub fn run() {
 
     let mut drone_handles = Vec::new();
     // Run drones on different threads
-    for mut drone in drones.into_iter() {
+    for mut drone in drones {
         let handle = thread::spawn(move || {
             drone.run();
         });
@@ -439,7 +431,7 @@ pub fn run() {
 
     let mut cclient_handles = Vec::new();
     // Run chat clients on different threads
-    for mut client in chat_clients.into_iter() {
+    for mut client in chat_clients {
         let handle = thread::spawn(move || {
             client.run();
         });
@@ -448,7 +440,7 @@ pub fn run() {
 
     let mut mclient_handles = Vec::new();
     // Run media client on different threads
-    for mut mclient in media_clients.into_iter() {
+    for mut mclient in media_clients {
         let handle = thread::spawn(move || {
             mclient.run();
         });
@@ -457,7 +449,7 @@ pub fn run() {
 
     let mut comm_server_handles = Vec::new();
     // Run Servers
-    for mut server in communication_servers.into_iter() {
+    for mut server in communication_servers {
         let handle = thread::spawn(move || {
             server.run();
         });
@@ -466,7 +458,7 @@ pub fn run() {
 
     let mut text_server_handles = Vec::new();
     // Run Servers
-    for mut server in text_servers.into_iter() {
+    for mut server in text_servers {
         let handle = thread::spawn(move || {
             server.run();
         });
@@ -475,7 +467,7 @@ pub fn run() {
 
     let mut media_server_handles = Vec::new();
     // Run Servers
-    for mut server in media_servers.into_iter() {
+    for mut server in media_servers {
         let handle = thread::spawn(move || {
             server.run();
         });
