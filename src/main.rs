@@ -1,4 +1,3 @@
-use slog::{slog_o, Drain};
 
 mod network_initializer;
 
