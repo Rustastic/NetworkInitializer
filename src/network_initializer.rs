@@ -16,7 +16,7 @@ use communication_server::servers::{
     communication_server::CommunicationServer, content_server::ContentServer,
 };
 
-use gui::SimCtrlGUI;
+use gui::app::SimCtrlGUI;
 
 use media_client::media_client::MediaClient;
 use messages::{
@@ -232,16 +232,17 @@ pub fn run() {
 
     // Create vector containing all the drones' function
     let drone_factories = [
-        drone_factory::<rustbusters_drone::RustBustersDrone>(),
-        drone_factory::<rustbusters_drone::RustBustersDrone>(),
-        drone_factory::<rustbusters_drone::RustBustersDrone>(),
-        drone_factory::<rustbusters_drone::RustBustersDrone>(),
-        drone_factory::<rustbusters_drone::RustBustersDrone>(),
-        drone_factory::<rustbusters_drone::RustBustersDrone>(),
-        drone_factory::<rustbusters_drone::RustBustersDrone>(),
-        drone_factory::<rustbusters_drone::RustBustersDrone>(),
-        drone_factory::<rustbusters_drone::RustBustersDrone>(),
-        drone_factory::<rustbusters_drone::RustBustersDrone>(),
+        drone_factory::<rust_roveri::RustRoveri>(),
+        drone_factory::<rust_roveri::RustRoveri>(),
+        drone_factory::<rust_roveri::RustRoveri>(),
+        drone_factory::<rust_roveri::RustRoveri>(),
+        drone_factory::<rust_roveri::RustRoveri>(),
+        drone_factory::<rust_roveri::RustRoveri>(),
+        drone_factory::<rust_roveri::RustRoveri>(),
+        drone_factory::<rust_roveri::RustRoveri>(),
+        drone_factory::<rust_roveri::RustRoveri>(),
+        drone_factory::<rust_roveri::RustRoveri>(),
+        
         /*drone_factory::<rusty_drones::RustyDrone>(),
         drone_factory::<LeDron_James::Drone>(),
         drone_factory::<dr_ones::Drone>(),
