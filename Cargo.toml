@@ -20,13 +20,13 @@ slog-scope = "4.4.0"
 eframe = { version = "0.31.0", features = ["default", "__screenshot"] }
 egui_extras = { version = "0.31.0", features = ["default", "image"] }
 
-simulation_controller = { git = "https://github.com/Rustastic/SimulationController", branch = "gui" }
+simulation_controller = { git = "https://github.com/Rustastic/SimulationController", branch = "refactor" }
 chat-client = { git = "https://github.com/Rustastic/ChatClient" }
 media_client = { git = "https://github.com/Rustastic/media_client" }
 messages = { git = "https://github.com/Rustastic/Messages" }
 communication_server = { git = "https://github.com/Rustastic/Servers" }
 
-gui = { git = "https://github.com/Rustastic/GUI" }
+gui = { git = "https://github.com/Rustastic/GUI", branch = "new" }
 
 rusty_drones = { git = "https://github.com/rusty-drone-2024/rusty-drone.git" }
 LeDron_James = { git = "https://github.com/anass03/LeDron_James.git", features = ["log"] }

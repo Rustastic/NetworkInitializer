@@ -16,7 +16,7 @@ use communication_server::servers::{
     communication_server::CommunicationServer, content_server::ContentServer,
 };
 
-use gui::SimCtrlGUI;
+use gui::app::SimCtrlGUI;
 
 use media_client::media_client::MediaClient;
 use messages::{
