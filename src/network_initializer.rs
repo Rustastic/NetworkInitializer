@@ -232,28 +232,18 @@ pub fn run() {
 
     // Create vector containing all the drones' function
     let drone_factories = [
-        drone_factory::<rust_roveri::RustRoveri>(),
-        drone_factory::<rust_roveri::RustRoveri>(),
-        drone_factory::<rust_roveri::RustRoveri>(),
-        drone_factory::<rust_roveri::RustRoveri>(),
-        drone_factory::<rust_roveri::RustRoveri>(),
-        drone_factory::<rust_roveri::RustRoveri>(),
-        drone_factory::<rust_roveri::RustRoveri>(),
-        drone_factory::<rust_roveri::RustRoveri>(),
-        drone_factory::<rust_roveri::RustRoveri>(),
-        drone_factory::<rust_roveri::RustRoveri>(),
-        
-        /*drone_factory::<rusty_drones::RustyDrone>(),
+        drone_factory::<rusty_drones::RustyDrone>(),
         drone_factory::<LeDron_James::Drone>(),
         drone_factory::<dr_ones::Drone>(),
         //drone_factory::<skylink::SkyLinkDrone>(),
         drone_factory::<rustbusters_drone::RustBustersDrone>(),
         drone_factory::<rustbusters_drone::RustBustersDrone>(),
+        drone_factory::<rustbusters_drone::RustBustersDrone>(),
         drone_factory::<rust_roveri::RustRoveri>(),
         drone_factory::<rust_do_it::RustDoIt>(),
         drone_factory::<wg_2024_rust::drone::RustDrone>(),
-        drone_factory::<null_pointer_drone::MyDrone>(),
-        drone_factory::<lockheedrustin_drone::LockheedRustin>()*/
+        //drone_factory::<null_pointer_drone::MyDrone>(),
+        drone_factory::<lockheedrustin_drone::LockheedRustin>()
     ];
 
     info!("[ {} ] Creating Drones", "Network Initializer".green());

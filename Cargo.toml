@@ -36,5 +36,5 @@ rustbusters-drone = { git = "https://github.com/Rustbusters/drone" }
 rust-roveri = { git = "https://github.com/RustRoveri/rust-roveri.git" }
 rust_do_it = { git = "https://github.com/RustDoIt/Drone.git" }
 wg_2024-rust = { git = "https://github.com/LuigiMiazzo17/unitn-advancedProgramming-WGL_2024-drone.git" }
-null-pointer-drone = { git = "https://github.com/The-Null-Pointer-Patrol/null-pointer-drone.git"}
+#null-pointer-drone = { git = "https://github.com/The-Null-Pointer-Patrol/null-pointer-drone.git"}
 lockheedrustin-drone = { git = "https://github.com/Lockheed-Rustin/drone.git" }
