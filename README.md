@@ -8,15 +8,13 @@ The **NetworkInitializer** is responsible for setting up and launching the entir
 
 ### Responsibilities
 * **Configuration Parsing**: Loads the network configuration from a TOML file. This includes information such as:
-
-  * Node type (drone, client, server)
-  * Unique identifiers
-  * Connectivity (neighbors)
+  * NodeType
+  * IDs
+  * Connected Nodes
 * **Network Construction**: Builds the network graph based on the parsed configuration, defining how nodes are connected.
 * **Component Initialization**: Starts all nodes in the simulation:
-
   * Launches drone, client, and server instances
-  * Boots up the GUI for interactive control
+  * Boots up the (GUI)[https://github.com/Rustastic/GUI]
 * **Simulation Bootstrap**: Triggers the simulation by initializing the necessary runtime environment and passing control to the Simulation Controller.
 
 ### Features
