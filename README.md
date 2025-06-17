@@ -1,7 +1,7 @@
 # NetworkInitializer
 
 ## Overview
-The **NetworkInitializer** is the entry point of the simulation for the drone-based network developed by the **Rustastic** group.
+The **NetworkInitializer** is the entry point of the simulation for the drone-based network.
 
 ## Role in the Simulation
 The **NetworkInitializer** is responsible for setting up and launching the entire simulation environment. It reads the network configuration from a TOML file, constructs the network topology, and initializes all required components including drones, clients, servers, and the GUI.
