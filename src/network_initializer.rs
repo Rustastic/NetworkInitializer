@@ -243,7 +243,7 @@ pub fn run() {
         drone_factory::<rust_do_it::RustDoIt>(),
         drone_factory::<wg_2024_rust::drone::RustDrone>(),
         //drone_factory::<null_pointer_drone::MyDrone>(),
-        drone_factory::<lockheedrustin_drone::LockheedRustin>()
+        drone_factory::<lockheedrustin_drone::LockheedRustin>(),
     ];
 
     info!("[ {} ] Creating Drones", "Network Initializer".green());
