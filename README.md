@@ -14,7 +14,7 @@ The **NetworkInitializer** is responsible for setting up and launching the entir
 * **Network Construction**: Builds the network graph based on the parsed configuration, defining how nodes are connected.
 * **Component Initialization**: Starts all nodes in the simulation:
   * Launches drone, client, and server instances
-  * Boots up the (GUI)[https://github.com/Rustastic/GUI]
+  * Boots up the [GUI](https://github.com/Rustastic/GUI)
 * **Simulation Bootstrap**: Triggers the simulation by initializing the necessary runtime environment and passing control to the Simulation Controller.
 
 ### Features
